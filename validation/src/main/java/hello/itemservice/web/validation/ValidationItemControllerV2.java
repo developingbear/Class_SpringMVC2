@@ -11,6 +11,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.validation.ValidationUtils;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -25,6 +27,13 @@ import java.util.Map;
 public class ValidationItemControllerV2 {
 
     private final ItemRepository itemRepository;
+    private final ItemValidator itemValidator;
+
+    @InitBinder
+    public void init(WebDataBinder dataBinder){
+        log.info("init binder {}", dataBinder);
+        dataBinder.addValidators(itemValidator);
+    }
 
     @GetMapping
     public String items(Model model) {
@@ -52,7 +61,7 @@ public class ValidationItemControllerV2 {
         if (!StringUtils.hasText(item.getItemName())) {
             bindingResult.addError(new FieldError("item", "itemName", "상품 이름은 필수입니다."));
         }
-        if (item.getPrice() == null || item.getPrice() < 1000 || item.getPrice() >1000000) {
+        if (item.getPrice() == null || item.getPrice() < 1000 || item.getPrice() > 1000000) {
             bindingResult.addError(new FieldError("item", "price", "가격은 1,000 ~1,000,000 까지 허용합니다."));
         }
         if (item.getQuantity() == null || item.getQuantity() > 10000) {
@@ -82,12 +91,11 @@ public class ValidationItemControllerV2 {
                             RedirectAttributes redirectAttributes) {
 
 
-
         if (!StringUtils.hasText(item.getItemName())) {
             bindingResult.addError(new FieldError("item", "itemName", item.getItemName(),
                     false, null, null, "상품 이름은 필수입니다."));
         }
-        if (item.getPrice() == null || item.getPrice() < 1000 || item.getPrice() >1000000) {
+        if (item.getPrice() == null || item.getPrice() < 1000 || item.getPrice() > 1000000) {
             bindingResult.addError(new FieldError("item", "price", item.getPrice(),
                     false, null, null, "가격은 1,000 ~1,000,000 까지 허용합니다."));
         }
@@ -122,21 +130,21 @@ public class ValidationItemControllerV2 {
 
         if (!StringUtils.hasText(item.getItemName())) {
             bindingResult.addError(new FieldError("item", "itemName", item.getItemName(),
-                    false, new String[]{"required.item.itemName"}, null, null));
+                    false, new String[]{"required.item.itemName" }, null, null));
         }
-        if (item.getPrice() == null || item.getPrice() < 1000 || item.getPrice() >1000000) {
+        if (item.getPrice() == null || item.getPrice() < 1000 || item.getPrice() > 1000000) {
             bindingResult.addError(new FieldError("item", "price", item.getPrice(),
-                    false, new String[]{"range.item.price"}, new Object[]{1000, 1000000}, null));
+                    false, new String[]{"range.item.price" }, new Object[]{1000, 1000000}, null));
         }
         if (item.getQuantity() == null || item.getQuantity() > 10000) {
             bindingResult.addError(new FieldError("item", "quantity", item.getQuantity(),
-                    false, new String[]{"max.item.quantity"}, new Object[]{9999}, null));
+                    false, new String[]{"max.item.quantity" }, new Object[]{9999}, null));
         }
         //특정 필드 예외가 아닌 전체 예외
         if (item.getPrice() != null && item.getQuantity() != null) {
             int resultPrice = item.getPrice() * item.getQuantity();
             if (resultPrice < 10000) {
-                bindingResult.addError(new ObjectError("item", new String[]{"totalPriceMin"}, new Object[]{10000, resultPrice}, null));
+                bindingResult.addError(new ObjectError("item", new String[]{"totalPriceMin" }, new Object[]{10000, resultPrice}, null));
             }
         }
         if (bindingResult.hasErrors()) {
@@ -151,35 +159,33 @@ public class ValidationItemControllerV2 {
         return "redirect:/validation/v2/items/{itemId}";
     }
 
-    @PostMapping("/add")
-    public String addItemV4 (@ModelAttribute Item item, BindingResult bindingResult,
+    //@PostMapping("/add")
+    public String addItemV4(@ModelAttribute Item item,
+                            BindingResult bindingResult,
                             RedirectAttributes redirectAttributes) {
+
+        itemValidator.validate(item, bindingResult);
+
         if (bindingResult.hasErrors()) {
             log.info("errors={}", bindingResult);
-
             return "validation/v2/addForm";
         }
 
-        log.info("objectName={}",  bindingResult.getObjectName());
-        log.info("target={}", bindingResult.getTarget());
+        //성공 로직
+        Item savedItem = itemRepository.save(item);
+        redirectAttributes.addAttribute("itemId", savedItem.getId());
+        redirectAttributes.addAttribute("status", true);
+        return "redirect:/validation/v2/items/{itemId}";
+    }
 
-//        if (!StringUtils.hasText(item.getItemName())) {
-//            bindingResult.rejectValue("itemName", "required");
-//        }
-        ValidationUtils.rejectIfEmptyOrWhitespace(bindingResult, "itemName", "required");
+    @PostMapping("/add")
+    public String addItemV6(@Validated @ModelAttribute Item item,
+                            BindingResult bindingResult,
+                            RedirectAttributes redirectAttributes) {
 
-        if (item.getPrice() == null || item.getPrice() < 1000 || item.getPrice() >1000000) {
-            bindingResult.rejectValue("price", "range", new Object[]{1000, 1000000}, null);
-        }
-        if (item.getQuantity() == null || item.getQuantity() > 10000) {
-            bindingResult.rejectValue("quantity", "max", new Object[]{9999}, null);
-        }
-        //특정 필드 예외가 아닌 전체 예외
-        if (item.getPrice() != null && item.getQuantity() != null) {
-            int resultPrice = item.getPrice() * item.getQuantity();
-            if (resultPrice < 10000) {
-                bindingResult.reject("totalPriceMin", new Object[]{10000, resultPrice}, null);
-            }
+        if (bindingResult.hasErrors()) {
+            log.info("errors={}", bindingResult);
+            return "validation/v2/addForm";
         }
 
         //성공 로직
