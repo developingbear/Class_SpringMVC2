@@ -37,6 +37,8 @@ public class ErrorPageController {
         printErrorInfo(httpServletRequest);
         return "error-page/500";
     }
+
+    /* produces를 이용, json 응답을 기대하는 경우에만 맵핑됨 */
     @RequestMapping(value = "/error-page/500", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> errorPage500Api(
             HttpServletRequest request, HttpServletResponse response) {
