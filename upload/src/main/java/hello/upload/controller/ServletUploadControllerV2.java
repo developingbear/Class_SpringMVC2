@@ -33,6 +33,7 @@ public class ServletUploadControllerV2 {
 
     @PostMapping("/upload")
     public String saveFile(HttpServletRequest request) throws ServletException, IOException {
+
         log.info("request = {}", request);
 
         String itemName = request.getParameter("itemName");

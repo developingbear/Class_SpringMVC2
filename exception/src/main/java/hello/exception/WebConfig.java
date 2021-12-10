@@ -25,6 +25,8 @@ public class WebConfig implements WebMvcConfigurer {
         resolvers.add(new UserHandlerExceptionResolver());
     }
 
+
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new LogInterceptor())
